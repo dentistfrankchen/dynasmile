@@ -1,5 +1,9 @@
 ⭐ Star Dynasmile on GitHub — it motivates us a lot!
 
+**DynaSmile is an open-source, AI-powered video analysis software designed for the aesthetic evaluation of dynamic smiles in orthodontics.** It helps dental researchers identify peak-smile frames, detect dentofacial landmarks, and quantify clinically relevant smile measurements.
+
+If DynaSmile supports your research, please cite the peer-reviewed SoftwareX article: Chen K, Qiu L, Xie X, Bai Y. *Dynasmile: Video-based smile analysis software in orthodontics*. SoftwareX. 2025;29:102004. [https://doi.org/10.1016/j.softx.2024.102004](https://doi.org/10.1016/j.softx.2024.102004)
+
 [![Share](https://img.shields.io/badge/share-000000?logo=x&logoColor=white)](https://x.com/intent/tweet?text=Check%20out%20this%20project%20on%20GitHub:%20https://github.com/dentistfrankchen/dynasmile%20%23Orthodontics%20%23Dentistry%20%23SmileAnalysis)
 [![Share](https://img.shields.io/badge/share-1877F2?logo=facebook&logoColor=white)](https://www.facebook.com/sharer/sharer.php?u=https://github.com/dentistfrankchen/dynasmile)
 [![Share](https://img.shields.io/badge/share-0A66C2?logo=linkedin&logoColor=white)](https://www.linkedin.com/sharing/share-offsite/?url=https://github.com/dentistfrankchen/dynasmile)
@@ -126,6 +130,16 @@ https://github.com/user-attachments/assets/79f666d3-ec7a-4db0-8ec4-c57b7f8d55bb
 ## 🤝 Feedback and Contributions
 
 We've made a lot of effort to implement many aspects of dynamic smile analysis in this software. However, the development journey doesn't end now, and your feedback is crucial for our further improvement.
+
+**What is DynaSmile used for?** DynaSmile supports video-based dynamic smile analysis in orthodontic and dental research. It converts a smile video into a reproducible peak-smile frame with landmark overlays and quantitative measurements.
+
+**How does DynaSmile evaluate a dynamic smile?** It estimates smile intensity across video frames, selects the frame with the greatest smile intensity, detects 13 dentofacial landmarks, and calculates 8 smile measurements.
+
+**Does DynaSmile require a local GPU?** No. The desktop client is designed to use an AWS EC2 GPU instance for compute-intensive analysis, allowing researchers without a dedicated local graphics card to run the workflow.
+
+**Can DynaSmile compare orthodontic treatment outcomes?** Researchers can export landmark coordinates and measurements as CSV files for quantitative comparison of dynamic smile characteristics across time points or study groups. DynaSmile is a research tool and does not replace professional diagnosis or clinical judgment.
+
+**How should DynaSmile be cited?** Cite the SoftwareX publication using DOI [10.1016/j.softx.2024.102004](https://doi.org/10.1016/j.softx.2024.102004). Machine-readable citation metadata are also provided in `CITATION.cff`.
 
 > [!IMPORTANT]
 > Whether you have feedback on improvements, have encountered any bugs, or have suggestions for features, we cannot wait to hear from you. Your insights help us get our software more robust and user-friendly.

@@ -15,15 +15,19 @@ import numpy as np
 import cv2
 import os
 import boto3
+import json
 from boto3.s3.transfer import TransferConfig, S3Transfer
 from .key_loader import check_json_file_exists
 def get_bucket_name(): #allow the user to define their bucket in data.json
+    configured_bucket = os.environ.get("DYNASMILE_BUCKET")
+    if configured_bucket:
+        return configured_bucket
     current_path=os.path.abspath(__file__)
     current_folder=os.path.dirname(current_path)
 
     search_target=os.path.join(current_folder,"data.json")
     if check_json_file_exists(search_target)==True:
-        with open(serach_target, 'r') as file:
+        with open(search_target, 'r') as file:
             config = json.load(file)
             return config.get("bucket_name")
     else:

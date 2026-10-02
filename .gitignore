@@ -1,7 +1,15 @@
 client/software/library/server.json
 client/software/test.json
 /server/service
-client.zip
+*.zip
+*.rar
+*.7z
+*.tar
+*.tar.gz
+*.tgz
+*.gz
+*.whl
+*.docx
 client/software/error_log.txt
 client/software/commissure.png
 client/software/library.rar

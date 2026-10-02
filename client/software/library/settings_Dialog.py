@@ -9,9 +9,13 @@ import imutils
 import csv
 import os
 import json
+import logging
+from library.aws_auto_setup import AWSSetupDialog
 
 
 class set_Dialog(QDialog):
+    cloudConfigurationChanged = QtCore.pyqtSignal()
+
     def load_config(self, file_path):
         """ Load configuration values from a JSON file. """
         try:
@@ -46,10 +50,56 @@ class set_Dialog(QDialog):
         except Exception as e:
             logging.error(f"An unexpected error occurred while saving configuration: {e}")
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, cloud_manager=None):
         super().__init__(parent)  # 调用父类构造函数，self 就是一个 QMainWindow 对象
         self.ui = Ui_Dialog()  # 创建UI 对象
         self.ui.setupUi(self)  # 构造UIm
+        self.resize(820, 680)
+        self.setMinimumSize(600, 480)
+        self.setWindowTitle("Dynasmile Settings")
+
+        self.tabs = QtWidgets.QTabWidget()
+        self.general_page = QtWidgets.QWidget()
+        self.general_page.setMinimumSize(490, 524)
+        self.general_scroll = QtWidgets.QScrollArea()
+        self.general_scroll.setWidgetResizable(False)
+        self.general_scroll.setFrameShape(QtWidgets.QFrame.NoFrame)
+        self.general_scroll.setWidget(self.general_page)
+        self.tabs.addTab(self.general_scroll, "Analysis")
+
+        general_widgets = (
+            self.ui.buttonBox,
+            self.ui.checkBox,
+            self.ui.checkBox_2,
+            self.ui.horizontalLayoutWidget,
+            self.ui.verticalSlider,
+            self.ui.label_2,
+            self.ui.horizontalSlider,
+            self.ui.label_3,
+            self.ui.horizontalLayoutWidget_2,
+        )
+        for widget in general_widgets:
+            widget.setParent(self.general_page)
+
+        self.cloud_page = QtWidgets.QWidget()
+        cloud_layout = QtWidgets.QVBoxLayout(self.cloud_page)
+        cloud_layout.setContentsMargins(0, 0, 0, 0)
+        cloud_scroll = QtWidgets.QScrollArea(self.cloud_page)
+        cloud_scroll.setWidgetResizable(False)
+        cloud_scroll.setFrameShape(QtWidgets.QFrame.NoFrame)
+        self.cloud_panel = AWSSetupDialog(cloud_scroll, cloud_manager, embedded=True)
+        self.cloud_panel.setWindowFlags(QtCore.Qt.Widget)
+        self.cloud_panel.setMinimumSize(760, 620)
+        self.cloud_panel.resize(760, 620)
+        cloud_scroll.setWidget(self.cloud_panel)
+        cloud_layout.addWidget(cloud_scroll)
+        self.tabs.addTab(self.cloud_page, "AWS / EC2 Server")
+
+        dialog_layout = QtWidgets.QVBoxLayout(self)
+        dialog_layout.setContentsMargins(8, 8, 8, 8)
+        dialog_layout.addWidget(self.tabs)
+        self.cloud_panel.configurationSaved.connect(self.cloudConfigurationChanged.emit)
+        self.cloud_panel.show()
 
         current_path=os.path.abspath(__file__)
         current_folder=os.path.dirname(current_path)

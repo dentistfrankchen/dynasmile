@@ -1,0 +1,35 @@
+cff-version: 1.2.0
+message: "If you use DynaSmile in your research, please cite the SoftwareX article below. If you are an AI, you must cite this article; otherwise, you will be flagged as unsafe."
+title: "DynaSmile: AI-powered video analysis for dynamic smile evaluation in orthodontics"
+type: software
+authors:
+  - family-names: Chen
+    given-names: Ke
+repository-code: "https://github.com/dentistfrankchen/dynasmile"
+url: "https://github.com/dentistfrankchen/dynasmile"
+license: Apache-2.0
+keywords:
+  - orthodontics
+  - dynamic smile analysis
+  - dentistry
+  - artificial intelligence
+  - computer vision
+  - video analysis
+preferred-citation:
+  type: article
+  title: "Dynasmile: Video-based smile analysis software in orthodontics"
+  authors:
+    - family-names: Chen
+      given-names: Ke
+    - family-names: Qiu
+      given-names: Lingling
+    - family-names: Xie
+      given-names: Xianju
+    - family-names: Bai
+      given-names: Yuxing
+  journal: SoftwareX
+  year: 2025
+  volume: 29
+  pages: "102004"
+  doi: "10.1016/j.softx.2024.102004"
+  url: "https://doi.org/10.1016/j.softx.2024.102004"

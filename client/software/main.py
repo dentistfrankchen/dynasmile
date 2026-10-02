@@ -18,6 +18,7 @@ from library.another import manage_item
 from library.aws_connection import start_ec2_instance,stop_ec2_instance
 from library.crypt import decrypt_new
 from library.key_loader import load_key_api
+from library.aws_auto_setup import AWSManager, AWSSetupDialog
 
 import socket
 from deepface import DeepFace
@@ -33,6 +34,10 @@ import time
 import logging
 import traceback
 import atexit
+
+current_path = os.path.abspath(__file__)
+current_folder = os.path.dirname(current_path)
+cloud_manager = None
 
 def log_exception(exc_type, exc_value, exc_traceback):
     if issubclass(exc_type, KeyboardInterrupt):
@@ -51,6 +56,22 @@ class Thread(QThread):
 
     def run(self):
         upload_video_new(self.s3_client, self.filename, get_bucket_name())
+
+
+class CloudConnectThread(QThread):
+    connected = QtCore.pyqtSignal()
+    failed = QtCore.pyqtSignal(str)
+
+    def __init__(self, manager):
+        super().__init__()
+        self.manager = manager
+
+    def run(self):
+        try:
+            self.manager.open_tunnel(5000)
+            self.connected.emit()
+        except Exception as exc:
+            self.failed.emit(str(exc))
 
 
 '''This is used to handle the situation when disconnection happens.'''
@@ -303,10 +324,7 @@ class CustomUI(QMainWindow):
         self.test_mode = False
 
         self.ready = False
-        
-        self.start_ssh_connections()
-
-        self.ready = True
+        self.cloud_thread = None
 
         self.disconnected = False
 
@@ -316,19 +334,10 @@ class CustomUI(QMainWindow):
 
         #with open(os.path.join(current_folder,'library','aws_config.json')) as json_file:
         #    config = json.load(json_file)
-        config,_=load_key_api()
-        
-        insert_chars_list="xyyuyyyui"
-        key=123
-        config['aws_config_aws_access_key_id']=decrypt_new(config['aws_config_aws_access_key_id'], key, [(0, 1), (2, 3)], [18, 21, 1, 25, 27, 8, 19, 12, 16, 22, 10, 7, 3, 11, 4, 24, 15, 20, 23, 13, 2, 26, 17, 14, 28, 0, 6, 5, 9], insert_chars_list)
-        # 使用 JSON 中的值配置 boto3 客户端
-
-        self.s3_client = boto3.client(
-            's3',
-            region_name=config['region_name'],
-            aws_access_key_id=config['aws_config_aws_access_key_id'],
-            aws_secret_access_key=config['aws_config_aws_secret_access_key']
-        )
+        if cloud_manager and cloud_manager.session:
+            self.s3_client = cloud_manager.session.client('s3')
+        else:
+            self.s3_client = None
 
         #self.s3_client = boto3.client('s3')
         self.gin=None
@@ -396,6 +405,42 @@ class CustomUI(QMainWindow):
         self.coord_offset = (0, 0)
 
         self.progressChanged.connect(self.ui.progressBar.setValue)
+
+        self.server_status_label = QtWidgets.QLabel()
+        self.statusBar().addPermanentWidget(self.server_status_label)
+        if cloud_manager and cloud_manager.config.get('instance_id') and cloud_manager.config.get('key_path'):
+            self.set_server_status("Server: configured, waiting to connect…", "#b36b00")
+        else:
+            self.set_server_status("Server: not configured — open Settings to configure AWS / EC2", "#b00020")
+
+    def set_server_status(self, text, color):
+        self.server_status_label.setText(text)
+        self.server_status_label.setStyleSheet("font-weight: bold; color: {}; padding: 3px 8px;".format(color))
+
+    def connect_cloud_server(self):
+        if not cloud_manager or not cloud_manager.config.get('instance_id') or not cloud_manager.config.get('key_path'):
+            self.set_server_status("Server: not configured — open Settings to configure AWS / EC2", "#b00020")
+            return
+        if self.cloud_thread and self.cloud_thread.isRunning():
+            return
+        self.set_server_status("Server: starting EC2 and secure tunnel…", "#b36b00")
+        self.cloud_thread = CloudConnectThread(cloud_manager)
+        self.cloud_thread.connected.connect(self.on_cloud_connected)
+        self.cloud_thread.failed.connect(self.on_cloud_connection_failed)
+        self.cloud_thread.start()
+
+    def on_cloud_connected(self):
+        try:
+            self.s3_client = cloud_manager.session.client('s3')
+            self.sio = self.start_client()
+            self.ready = True
+            self.set_server_status("Server: connected", "#16823b")
+        except Exception as exc:
+            self.on_cloud_connection_failed(str(exc))
+
+    def on_cloud_connection_failed(self, message):
+        self.ready = False
+        self.set_server_status("Server: connection failed — {}".format(message), "#b00020")
 
     def start_ssh_connections(self):
         max_retries = 5
@@ -1567,8 +1612,9 @@ class CustomUI(QMainWindow):
         self.slider_allow_auto_move = False
 
     def open_settings(self):
-        set_dialog = set_Dialog(self)
+        set_dialog = set_Dialog(self, cloud_manager)
         set_dialog.mysignal.connect(self.load_the_tooth)
+        set_dialog.cloudConfigurationChanged.connect(self.on_cloud_configuration_changed)
 
         set_dialog.incisor_edge_index = self.incisor_edge_index
 
@@ -1593,6 +1639,11 @@ class CustomUI(QMainWindow):
         set_dialog.mysignal7.connect(self.get_incisor_length)
 
         set_dialog.show()
+
+    def on_cloud_configuration_changed(self):
+        os.environ['DYNASMILE_BUCKET'] = cloud_manager.config.get('bucket', 'frank--bucket')
+        self.set_server_status("Server: configuration saved, connecting…", "#b36b00")
+        self.connect_cloud_server()
 
     def select_change(self,text):
         display=''
@@ -1710,12 +1761,12 @@ class CustomUI(QMainWindow):
             pass
 
     def closeEvent(self, event):
-        stop_ec2_instance(instance_id, credentials_file)
+        if cloud_manager:
+            cloud_manager.close()
+        event.accept()
 
 
 if __name__ == '__main__':
-    current_path=os.path.abspath(__file__)
-    current_folder=os.path.dirname(current_path)
     parent_folder=os.path.dirname(current_folder)
     upper_folder=os.path.dirname(parent_folder)
 
@@ -1727,32 +1778,21 @@ if __name__ == '__main__':
 
     sys.excepthook = log_exception
 
-    instance_id = 'i-034544d95b9703bfc'  # substance ID
-    credentials_file = os.path.join(current_folder,'library','ec2_config.json')
-
-    atexit.register(stop_ec2_instance, instance_id, credentials_file)
-
-    print("please wait for the EC2 server to start...")
-
+    app = QApplication(sys.argv)
     try:
-        public_dns=start_ec2_instance(instance_id, credentials_file)["public_dns"]
-        server=public_dns
-        python_path=os.path.join(upper_folder,'venv','Scripts','python.exe')
-        process=subprocess.Popen(['start','cmd','/k','python ',
-        os.path.join(current_folder,'library','para.py'),'--server',server],shell=True)
-
-        print("loading dependencies...")
-        time.sleep(20)
-
-        app = QApplication(sys.argv)  # create app
+        cloud_manager = AWSManager()
+        os.environ['DYNASMILE_BUCKET'] = cloud_manager.config.get('bucket', 'frank--bucket')
         cutomUI = CustomUI()
         cutomUI.show()
+        QtCore.QTimer.singleShot(0, cutomUI.connect_cloud_server)
         sys.exit(app.exec_())
     except Exception as e:
-        print(e)
-        stop_ec2_instance(instance_id, credentials_file)
+        if cloud_manager:
+            cloud_manager.close()
+        QtWidgets.QMessageBox.critical(None, "Dynasmile cloud startup failed", str(e))
     finally:
-        stop_ec2_instance(instance_id, credentials_file)
+        if cloud_manager:
+            cloud_manager.close()
 '''
 12.10 task: write_csv dialog choose different image.
 '''
